@@ -13,21 +13,35 @@ export interface Bot {
   /** Square icon image (small, used in list rows and grid items) */
   iconImage?: string
   creator: string
+  creatorId?: string
+  aiModel?: string
+  tags?: string[]
+  createdAt?: string
+  updatedAt?: string
   featured?: boolean
   editorsChoice?: boolean
   tagline?: string
+  isLiked?: boolean
+  isPurchased?: boolean
+  likeCount?: number
+  preview?: {
+    previewQueriesUsed: number
+    previewQueriesLimit: number
+    previewQueriesRemaining: number | null
+    hasUnlimitedAccess: boolean
+  }
 }
 
 export interface BotDetails extends Bot {
   longDescription: string
   creatorImage: string
-  features: string[]
-  screenshots: string[]
+  features?: string[]
+  screenshots?: string[]
   testimonials: Array<{ author: string; text: string; rating: number }>
-  version: string
-  updated: string
-  size: string
-  ageRating: string
+  version?: string
+  updated?: string
+  size?: string
+  ageRating?: string
 }
 
 // Separate hero (large) and icon (small) images for each bot
@@ -48,6 +62,7 @@ export const mockBots: Bot[] = [
     featured: true,
     editorsChoice: true,
     tagline: 'Resolve tickets 70% faster',
+    likeCount: 1450,
   },
   {
     id: '2',
@@ -64,6 +79,7 @@ export const mockBots: Bot[] = [
     creator: 'WriteBot Inc',
     featured: true,
     tagline: 'Write smarter, publish faster',
+    likeCount: 890,
   },
   {
     id: '3',
@@ -80,6 +96,7 @@ export const mockBots: Bot[] = [
     creator: 'SalesForce AI',
     featured: true,
     tagline: 'Your AI sales closer',
+    likeCount: 2100,
   },
   {
     id: '4',
@@ -95,6 +112,7 @@ export const mockBots: Bot[] = [
     iconImage: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=120&h=120&fit=crop',
     creator: 'LinguaAI',
     tagline: 'Speak fluently, naturally',
+    likeCount: 430,
   },
   {
     id: '5',
@@ -111,6 +129,7 @@ export const mockBots: Bot[] = [
     creator: 'WellnessAI',
     editorsChoice: true,
     tagline: 'Your daily calm companion',
+    likeCount: 3800,
   },
   {
     id: '6',
@@ -126,6 +145,7 @@ export const mockBots: Bot[] = [
     iconImage: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=120&h=120&fit=crop',
     creator: 'DevTools AI',
     tagline: 'Ship code with confidence',
+    likeCount: 1750,
   },
 ]
 

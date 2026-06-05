@@ -10,11 +10,15 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   X,
+  Sparkles,
 } from 'lucide-react'
 import { useChat } from '../context/ChatContext'
-import { botDetails } from '../data/bots'
+import { useAuth } from '../context/AuthContext'
+import { botDetails, Bot as FrontendBot } from '../data/bots'
 import { cn } from '../lib/utils'
 import type { Message } from '../context/ChatContext'
+import { fetchBotDetail, mapBackendBotToFrontendBot, purchaseBotRequest } from '../lib/api'
+import MarkdownRenderer from '../components/ui/MarkdownRenderer'
 
 function formatTime(date: Date) {
   return new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(date)
@@ -32,7 +36,10 @@ function formatDate(date: Date) {
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const bot = botDetails[id ?? '1']
+  const { user, isAuthenticated, updateUser } = useAuth()
+  
+  const [bot, setBot] = useState<FrontendBot | null>(null)
+  const [loading, setLoading] = useState<boolean>(true)
 
   const {
     getConversations,
@@ -42,6 +49,7 @@ export default function ChatPage() {
     deleteConversation,
     setActiveConversationId,
     activeConversationId,
+    loadHistory,
   } = useChat()
 
   const [input, setInput] = useState('')
@@ -52,15 +60,48 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Trial / Query limit modal state
+  const [showLimitModal, setShowLimitModal] = useState(false)
+  const [purchasing, setPurchasing] = useState(false)
+  const [purchaseError, setPurchaseError] = useState<string | null>(null)
+
   const conversations = getConversations(id ?? '')
   const activeConvo = getActiveConversation(id ?? '')
+
+  // Load bot details
+  useEffect(() => {
+    if (!id) return
+    const localBot = botDetails[id]
+    if (localBot) {
+      setBot(localBot)
+    }
+
+    setLoading(true)
+    fetchBotDetail(id)
+      .then((res) => {
+        setBot(mapBackendBotToFrontendBot(res.bot))
+      })
+      .catch((err) => {
+        console.error('Error loading bot for chat:', err)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [id])
 
   // Create first conversation if none exist
   useEffect(() => {
     if (bot && conversations.length === 0) {
       createConversation(id ?? '', bot.name)
     }
-  }, [bot, id])
+  }, [bot, id, conversations.length])
+
+  // Load chat history dynamically when active conversation changes
+  useEffect(() => {
+    if (id && activeConvo?.id) {
+      loadHistory(id, activeConvo.id)
+    }
+  }, [id, activeConvo?.id, loadHistory])
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -79,6 +120,49 @@ export default function ChatPage() {
     setMobileSidebarOpen(false)
   }, [activeConversationId])
 
+  const handlePurchase = async () => {
+    if (!bot) return
+    setPurchasing(true)
+    setPurchaseError(null)
+    try {
+      await purchaseBotRequest(bot.id)
+      
+      // Update local auth context purchasedBots
+      if (user) {
+        const updatedPurchased = [...(user.purchasedBots || []), bot.id]
+        updateUser({ purchasedBots: updatedPurchased })
+      }
+      
+      // Update local bot details and set access as unlimited
+      setBot((prev) => {
+        if (!prev) return null
+        return {
+          ...prev,
+          isPurchased: true,
+          preview: prev.preview ? {
+            ...prev.preview,
+            previewQueriesRemaining: null,
+            hasUnlimitedAccess: true
+          } : undefined
+        }
+      })
+      setShowLimitModal(false)
+    } catch (err: any) {
+      console.error(err)
+      setPurchaseError(err.message || 'Purchase failed. Please try again.')
+    } finally {
+      setPurchasing(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
   if (!bot) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -87,7 +171,7 @@ export default function ChatPage() {
     )
   }
 
-  function handleSend() {
+  async function handleSend() {
     const text = input.trim()
     if (!text || !activeConvo) return
     setInput('')
@@ -95,7 +179,19 @@ export default function ChatPage() {
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
     }
-    sendMessage(id ?? '', activeConvo.id, text)
+    try {
+      const res = await sendMessage(id ?? '', activeConvo.id, text)
+      if (res && res.preview) {
+        setBot((prev) => prev ? { ...prev, preview: res.preview } : null)
+      }
+    } catch (err: any) {
+      if (err.code === 'PREVIEW_LIMIT_EXCEEDED') {
+        if (err.details) {
+          setBot((prev) => prev ? { ...prev, preview: err.details } : null)
+        }
+        setShowLimitModal(true)
+      }
+    }
     inputRef.current?.focus()
   }
 
@@ -107,6 +203,7 @@ export default function ChatPage() {
   }
 
   function handleNewChat() {
+    if (!bot) return
     createConversation(id ?? '', bot.name)
     setMobileSidebarOpen(false)
   }
@@ -264,9 +361,16 @@ export default function ChatPage() {
             className="w-8 h-8 rounded-xl object-cover flex-shrink-0"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-semibold text-foreground leading-tight truncate">
-              {bot.name}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-[15px] font-semibold text-foreground leading-tight truncate">
+                {bot.name}
+              </p>
+              {bot.preview && !bot.preview.hasUnlimitedAccess && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-accent bg-accent/15 px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
+                  Trial: {bot.preview.previewQueriesRemaining !== null ? bot.preview.previewQueriesRemaining : (bot.preview.previewQueriesLimit - bot.preview.previewQueriesUsed)} / {bot.preview.previewQueriesLimit} left
+                </span>
+              )}
+            </div>
             <p className="text-[12px] text-label-tertiary truncate hidden sm:block">{bot.subtitle}</p>
           </div>
 
@@ -370,6 +474,61 @@ export default function ChatPage() {
           </p>
         </div>
       </div>
+
+      {/* ── Limit Reached Modal ── */}
+      {showLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-300"
+            onClick={() => setShowLimitModal(false)}
+          />
+          {/* Content panel */}
+          <div className="relative w-full max-w-md bg-card border border-border/80 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setShowLimitModal(false)}
+              className="absolute top-4 right-4 p-2 text-label-tertiary hover:text-foreground rounded-full hover:bg-muted transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="w-16 h-16 rounded-2xl bg-accent/15 flex items-center justify-center mb-4">
+              <Sparkles size={28} className="text-accent animate-pulse" />
+            </div>
+
+            <h3 className="text-xl font-extrabold text-foreground tracking-tight mb-2">
+              Preview Limit Reached
+            </h3>
+            
+            <p className="text-[14px] text-label-secondary leading-relaxed mb-6">
+              You have used all {bot.preview?.previewQueriesLimit || 3} free preview queries for <strong className="text-foreground">{bot.name}</strong>. Purchase this assistant to continue chatting without limits.
+            </p>
+
+            {purchaseError && (
+              <p className="text-[12px] font-semibold text-destructive mb-4 bg-destructive/10 px-3 py-1.5 rounded-lg w-full">
+                {purchaseError}
+              </p>
+            )}
+
+            <div className="flex flex-col gap-2.5 w-full">
+              <button
+                onClick={handlePurchase}
+                disabled={purchasing}
+                className="w-full bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-accent/25 hover:shadow-accent/35 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer text-[14px]"
+              >
+                <Sparkles size={16} />
+                {purchasing ? 'Processing...' : `Buy Lifetime Access for $${bot.price?.toFixed(2) || '0.00'}`}
+              </button>
+              <button
+                onClick={() => setShowLimitModal(false)}
+                className="w-full bg-muted hover:bg-muted/80 text-label-secondary font-semibold py-3 px-4 rounded-xl active:scale-[0.98] transition-all cursor-pointer text-[14px]"
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -401,9 +560,9 @@ function MessageBubble({ msg, botImage }: { msg: Message; botImage: string }) {
             : 'bg-card border border-border/60 text-foreground rounded-2xl rounded-bl-sm'
         )}
       >
-        <p className="text-[14px] sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words">
-          {msg.text}
-        </p>
+        <div className="text-[14px] sm:text-[15px] leading-relaxed break-words">
+          <MarkdownRenderer text={msg.text} />
+        </div>
         <p
           className={cn(
             'text-[10px] sm:text-[11px] mt-1 text-right',

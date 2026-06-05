@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell, { PageContainer } from '../components/AppShell'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import { cn } from '../lib/utils'
 import {
   ArrowLeft,
@@ -81,7 +82,8 @@ const SettingsPage: React.FC = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const [notifications, setNotifications] = useState(true)
-  const [darkMode, setDarkMode] = useState(false)
+  const { theme, toggleTheme } = useTheme()
+  const darkMode = theme === 'dark'
 
   const handleLogout = () => {
     logout()
@@ -144,7 +146,7 @@ const SettingsPage: React.FC = () => {
                 icon={<Moon size={20} />}
                 toggle
                 checked={darkMode}
-                onToggle={setDarkMode}
+                onToggle={toggleTheme}
               />
               <div className="ios-separator" />
               <SettingsRow label="Privacy & Security" icon={<Shield size={20} />} />

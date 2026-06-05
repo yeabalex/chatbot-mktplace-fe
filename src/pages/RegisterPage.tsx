@@ -5,12 +5,14 @@ import AuthFormLayout from '../components/auth/AuthFormLayout'
 import Button from '../components/ui/Button'
 import { AUTH_STRINGS } from '../lib/constants'
 
-const LoginPage: React.FC = () => {
+const RegisterPage: React.FC = () => {
   const navigate = useNavigate()
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { register, isAuthenticated, isLoading: authLoading } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
-  const [emailOrUsername, setEmailOrUsername] = useState('')
+  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -19,23 +21,26 @@ const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, authLoading, navigate])
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     setError(null)
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    setIsLoading(true)
     try {
-      await login(emailOrUsername, password)
-      navigate('/marketplace')
+      const res = await register(username, email, password)
+      navigate('/verify-email', {
+        state: {
+          email: email,
+          devOtp: res.devOtp
+        }
+      })
     } catch (err: any) {
-      if (err.code === 'EMAIL_NOT_VERIFIED') {
-        navigate('/verify-email', {
-          state: {
-            email: err.email || emailOrUsername
-          }
-        })
-      } else {
-        setError(err.message || 'Invalid credentials. Please try again.')
-      }
+      setError(err.message || 'Registration failed. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -51,10 +56,10 @@ const LoginPage: React.FC = () => {
 
   return (
     <AuthFormLayout
-      heroDescription={AUTH_STRINGS.heroLoginDescription}
-      mobileSubtitle="Sign in to explore and sync your bot library."
-      heading={AUTH_STRINGS.loginTitle}
-      subtitle={AUTH_STRINGS.loginSubtitle}
+      heroDescription={AUTH_STRINGS.heroRegisterDescription}
+      mobileSubtitle="Create an account to start your bot library."
+      heading={AUTH_STRINGS.registerTitle}
+      subtitle={AUTH_STRINGS.registerSubtitle}
     >
       {error && (
         <div className="mb-4 p-3.5 text-[15px] font-semibold bg-destructive/10 text-destructive rounded-[10px] text-center">
@@ -62,20 +67,30 @@ const LoginPage: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleLogin} className="space-y-6">
+      <form onSubmit={handleRegister} className="space-y-6">
         <div className="ios-grouped overflow-hidden">
           <input
-            id="login-email"
+            id="register-username"
             type="text"
-            value={emailOrUsername}
-            onChange={(e) => setEmailOrUsername(e.target.value)}
-            placeholder="Email or Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Username"
             required
             className="w-full px-4 py-3.5 text-[17px] bg-transparent outline-none placeholder:text-label-tertiary text-foreground"
           />
           <div className="ios-separator !ml-0" />
           <input
-            id="login-password"
+            id="register-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            required
+            className="w-full px-4 py-3.5 text-[17px] bg-transparent outline-none placeholder:text-label-tertiary text-foreground"
+          />
+          <div className="ios-separator !ml-0" />
+          <input
+            id="register-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -83,33 +98,34 @@ const LoginPage: React.FC = () => {
             required
             className="w-full px-4 py-3.5 text-[17px] bg-transparent outline-none placeholder:text-label-tertiary text-foreground"
           />
-        </div>
-
-        <div className="flex justify-end mt-1 px-1">
-          <Link
-            to="/forgot-password"
-            className="text-[14px] text-primary hover:underline font-semibold active:opacity-60"
-          >
-            Forgot Password?
-          </Link>
+          <div className="ios-separator !ml-0" />
+          <input
+            id="register-confirm-password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm Password"
+            required
+            className="w-full px-4 py-3.5 text-[17px] bg-transparent outline-none placeholder:text-label-tertiary text-foreground"
+          />
         </div>
 
         <Button type="submit" variant="primary" size="lg" fullWidth isLoading={isLoading}>
-          Sign In
+          Sign Up
         </Button>
       </form>
 
       <div className="mt-8 text-center">
-        <span className="text-label-secondary text-[15px]">Don't have an account? </span>
+        <span className="text-label-secondary text-[15px]">Already have an account? </span>
         <Link
-          to="/register"
+          to="/login"
           className="text-primary text-[15px] font-semibold active:opacity-60 hover:underline"
         >
-          Sign Up
+          Sign In
         </Link>
       </div>
     </AuthFormLayout>
   )
 }
 
-export default LoginPage
+export default RegisterPage

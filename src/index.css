@@ -22,6 +22,8 @@
   --color-fill-secondary: hsl(var(--fill-secondary));
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-display: 'Sora', 'Inter', system-ui, sans-serif;
@@ -30,58 +32,111 @@
   --radius-app-icon: 22%;
   --radius-pill: 980px;
 
-  --shadow-ios-sm: 0 1px 3px rgb(0 0 0 / 0.08);
-  --shadow-ios-card: 0 4px 24px rgb(0 0 0 / 0.12);
+  --shadow-ios-sm: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-ios-card: 0 8px 32px rgb(0 0 0 / 0.08), 0 2px 8px rgb(0 0 0 / 0.04);
+  --shadow-ios-card-hover: 0 16px 48px rgb(0 0 0 / 0.12), 0 4px 12px rgb(0 0 0 / 0.06);
+  --shadow-glow: 0 0 40px rgb(99 102 241 / 0.15);
 }
 
 @layer base {
   :root {
-    /* Main content area — very light warm gray, not pure white */
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    /* Main content — soft cool gray */
+    --background: 225 25% 97%;
+    --foreground: 224 50% 8%;
 
-    /* Accent — vivid indigo-blue */
-    --primary: 234 89% 60%;
+    /* Accent — rich indigo */
+    --primary: 239 84% 67%;
     --primary-foreground: 0 0% 100%;
 
-    /* Cards — pure white so they lift off the background */
+    /* Secondary accent — teal */
+    --accent: 172 66% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Cards — pure white with subtle depth */
     --card: 0 0% 100%;
-    --secondary: 0 0% 100%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 225 25% 95%;
+    --secondary-foreground: 224 50% 8%;
 
     /* Muted surfaces */
-    --muted: 220 14% 93%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 225 20% 93%;
+    --muted-foreground: 225 10% 46%;
 
-    /* Borders & separators — visible but not harsh */
-    --border: 220 13% 86%;
+    /* Borders & separators */
+    --border: 225 15% 88%;
     --input: 0 0% 100%;
-    --separator: 220 13% 86%;
+    --separator: 225 15% 88%;
 
     /* Semantic */
-    --success: 142 71% 45%;
-    --destructive: 0 84% 60%;
+    --success: 160 84% 39%;
+    --destructive: 0 72% 51%;
 
-    /* Text hierarchy — high contrast */
-    --label: 222 47% 11%;
-    --label-secondary: 220 14% 30%;
-    --label-tertiary: 220 9% 52%;
+    /* Text hierarchy */
+    --label: 224 50% 8%;
+    --label-secondary: 224 20% 30%;
+    --label-tertiary: 225 12% 52%;
 
     /* Fill tones */
-    --fill: 220 9% 46%;
-    --fill-secondary: 220 13% 72%;
+    --fill: 225 12% 46%;
+    --fill-secondary: 225 15% 72%;
 
-    /* Sidebar — dark slate */
-    --sidebar: 222 47% 11%;
+    /* Sidebar — deep navy */
+    --sidebar: 228 45% 10%;
     --sidebar-foreground: 210 40% 96%;
 
-    --radius: 12px;
+    --radius: 14px;
   }
+
+  .dark {
+    /* Pure dark mode with soft slate/navy undertones */
+    --background: 224 25% 8%;
+    --foreground: 210 40% 98%;
+
+    /* Primary indigo, slightly adjusted for better contrast in dark mode */
+    --primary: 239 84% 72%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Teal accent, nice and bright */
+    --accent: 172 70% 45%;
+    --accent-foreground: 224 50% 8%;
+
+    /* Cards - rich dark obsidian */
+    --card: 224 22% 12%;
+    --secondary: 224 20% 15%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted surfaces */
+    --muted: 224 20% 16%;
+    --muted-foreground: 215 15% 65%;
+
+    /* Borders & separators */
+    --border: 224 15% 20%;
+    --input: 224 22% 12%;
+    --separator: 224 15% 20%;
+
+    /* Semantic */
+    --success: 160 84% 42%;
+    --destructive: 0 84% 60%;
+
+    /* Text hierarchy */
+    --label: 210 40% 98%;
+    --label-secondary: 215 15% 75%;
+    --label-tertiary: 215 12% 55%;
+
+    /* Fill tones */
+    --fill: 224 12% 25%;
+    --fill-secondary: 224 15% 35%;
+
+    /* Sidebar - even darker navy/black for premium contrast */
+    --sidebar: 224 30% 6%;
+    --sidebar-foreground: 210 40% 98%;
+  }
+
 
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -95,21 +150,49 @@
   }
 }
 
+/* ── Keyframes ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+
 @layer components {
-  /* Sidebar uses its own dark surface */
+  /* ── Glass effects ── */
+  .glass,
   .ios-blur {
-    background: rgb(255 255 255 / 0.85);
+    background: rgb(255 255 255 / 0.72);
     backdrop-filter: saturate(180%) blur(20px);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
   }
 
+  .glass-dark,
   .ios-blur-dark {
     background: hsl(var(--sidebar) / 0.92);
     backdrop-filter: saturate(180%) blur(20px);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
   }
 
-  /* Typography scale */
+  /* ── Typography scale ── */
   .ios-large-title {
     font-family: var(--font-display);
     @apply text-[34px] font-bold tracking-tight leading-tight text-foreground;
@@ -152,56 +235,144 @@
     letter-spacing: 0;
   }
 
+  /* ── App Icon ── */
   .app-icon {
     border-radius: var(--radius-app-icon);
-    box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.1), inset 0 0 0 0.5px rgb(0 0 0 / 0.06);
   }
 
+  /* ── Buttons ── */
   .ios-get-btn {
-    @apply inline-flex items-center justify-center font-bold text-primary rounded-full bg-primary/10 px-4 min-w-[72px] h-[30px] text-[15px] active:opacity-60 transition-opacity;
+    @apply inline-flex items-center justify-center font-bold text-primary rounded-full bg-primary/10 px-4 min-w-[72px] h-[30px] text-[15px] transition-all duration-200;
     letter-spacing: -0.24px;
+  }
+  .ios-get-btn:hover {
+    @apply bg-primary/15 scale-105;
+  }
+  .ios-get-btn:active {
+    @apply opacity-60 scale-95;
   }
 
   .ios-get-btn-filled {
     @apply bg-primary text-primary-foreground;
   }
+  .ios-get-btn-filled:hover {
+    @apply bg-primary/90;
+  }
 
+  /* ── Card containers ── */
   .ios-grouped {
-    @apply bg-card rounded-xl overflow-hidden border border-border/60;
+    @apply bg-card rounded-2xl overflow-hidden border border-border/50;
     box-shadow: var(--shadow-ios-sm);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
   }
-
-  .ios-list-row {
-    @apply flex items-center gap-3 px-4 py-3 bg-card active:bg-muted transition-colors;
-  }
-
-  .ios-separator {
-    @apply h-px bg-separator/70 ml-[76px];
-  }
-
-  .ios-search {
-    @apply w-full bg-muted rounded-xl px-4 py-2.5 text-[17px] text-foreground placeholder:text-label-tertiary outline-none border border-border/40 focus:border-primary/40 transition-colors;
-    letter-spacing: -0.43px;
-  }
-
-  .ios-tab-bar {
-    background: rgb(255 255 255 / 0.9);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
-    border-top: 1px solid hsl(var(--separator) / 0.8);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  .ios-hero-card {
-    @apply relative overflow-hidden rounded-2xl text-white w-[min(300px,85vw)] sm:w-[340px] lg:w-full lg:min-w-0 h-[380px] sm:h-[400px] lg:h-[420px] flex-shrink-0 snap-center;
+  .ios-grouped:hover {
     box-shadow: var(--shadow-ios-card);
   }
 
+  .ios-list-row {
+    @apply flex items-center gap-3.5 px-4 py-3.5 bg-card transition-all duration-200;
+  }
+  .ios-list-row:hover {
+    @apply bg-muted/50;
+  }
+
+  .ios-separator {
+    @apply h-px bg-separator/60 ml-[76px];
+  }
+
+  .ios-search {
+    @apply w-full bg-muted/70 rounded-xl px-4 py-2.5 text-[17px] text-foreground placeholder:text-label-tertiary outline-none border border-border/30 transition-all duration-200;
+    letter-spacing: -0.43px;
+  }
+  .ios-search:focus {
+    @apply border-primary/40 bg-card shadow-sm;
+  }
+
+  /* ── Tab bar ── */
+  .ios-tab-bar {
+    background: rgb(255 255 255 / 0.88);
+    backdrop-filter: saturate(200%) blur(24px);
+    -webkit-backdrop-filter: saturate(200%) blur(24px);
+    border-top: 1px solid hsl(var(--separator) / 0.6);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* ── Featured hero card ── */
+  .ios-hero-card {
+    @apply relative overflow-hidden rounded-2xl text-white w-[min(320px,88vw)] sm:w-[360px] lg:w-full lg:min-w-0 flex-shrink-0 snap-center;
+    aspect-ratio: 16 / 10;
+    box-shadow: var(--shadow-ios-card);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+  }
+  .ios-hero-card:hover {
+    box-shadow: var(--shadow-ios-card-hover);
+  }
+
+  /* ── Scrollbar hiding ── */
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+
+  /* ── Animated entrance ── */
+  .animate-in {
+    animation: fadeInUp 0.5s ease-out both;
+  }
+  .animate-fade {
+    animation: fadeIn 0.4s ease-out both;
+  }
+
+  /* ── Gradient accent line ── */
+  .gradient-line {
+    height: 3px;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--primary)));
+    background-size: 200% auto;
+    border-radius: 2px;
+  }
+
+  /* ── Premium card hover ── */
+  .card-hover {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-ios-card-hover);
+  }
+
+  /* ── Sidebar nav item ── */
+  .sidebar-nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-[15px] font-medium transition-all duration-200;
+  }
+  .sidebar-nav-item--active {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.08));
+    @apply text-white;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+  }
+  .sidebar-nav-item--inactive {
+    @apply text-white/45;
+  }
+  .sidebar-nav-item--inactive:hover {
+    @apply bg-white/8 text-white/75;
+  }
+
+  /* ── Section badge ── */
+  .section-badge {
+    @apply inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--accent) / 0.08));
+    color: hsl(var(--primary));
+  }
+
+  /* ── Rank number ── */
+  .rank-number {
+    font-family: var(--font-display);
+    @apply text-[22px] font-bold tabular-nums;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }

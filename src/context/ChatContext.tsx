@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
+import { queryBotRequest, fetchChatHistory } from '../lib/api'
+import { useAuth } from './AuthContext'
 
 export interface Message {
   id: string
@@ -22,38 +24,65 @@ interface ChatContextValue {
   getConversations: (botId: string) => Conversation[]
   getActiveConversation: (botId: string) => Conversation | null
   createConversation: (botId: string, botName: string) => Conversation
-  sendMessage: (botId: string, conversationId: string, text: string) => void
+  sendMessage: (botId: string, conversationId: string, text: string) => Promise<any>
   deleteConversation: (botId: string, conversationId: string) => void
+  loadHistory: (botId: string, conversationId: string) => Promise<void>
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null)
-
-// Simulated bot replies per category feel
-const BOT_REPLIES: Record<string, string[]> = {
-  default: [
-    "That's a great question! Let me help you with that.",
-    "I understand what you're looking for. Here's what I can do...",
-    "Sure! I can definitely assist with that.",
-    "Great point. Based on what you've shared, I'd suggest...",
-    "I'm on it! Give me a moment to process that for you.",
-    "Absolutely, here's my take on that...",
-  ],
-}
-
-function getBotReply(text: string): string {
-  const replies = BOT_REPLIES.default
-  // Simple hash to pick a consistent-ish reply
-  const idx = text.length % replies.length
-  return replies[idx]
-}
 
 function uid() {
   return Math.random().toString(36).slice(2, 10)
 }
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
   const [conversations, setConversations] = useState<Record<string, Conversation[]>>({})
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null)
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+
+  // Load conversations when user changes
+  useEffect(() => {
+    setActiveConversationId(null)
+
+    if (!user) {
+      setConversations({})
+      setLoadedUserId(null)
+      return
+    }
+
+    const storageKey = `chatbot_marketplace_sessions_${user.id}`
+    const stored = localStorage.getItem(storageKey)
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        // Convert date strings back to Date objects
+        Object.keys(parsed).forEach(botId => {
+          parsed[botId] = parsed[botId].map((c: any) => ({
+            ...c,
+            updatedAt: new Date(c.updatedAt),
+            messages: c.messages.map((m: any) => ({
+              ...m,
+              timestamp: new Date(m.timestamp)
+            }))
+          }))
+        })
+        setConversations(parsed)
+      } catch {
+        setConversations({})
+      }
+    } else {
+      setConversations({})
+    }
+    setLoadedUserId(user.id)
+  }, [user?.id])
+
+  // Persist sessions to localStorage
+  useEffect(() => {
+    if (!user || user.id !== loadedUserId) return
+    const storageKey = `chatbot_marketplace_sessions_${user.id}`
+    localStorage.setItem(storageKey, JSON.stringify(conversations))
+  }, [conversations, user?.id, loadedUserId])
 
   const getConversations = useCallback(
     (botId: string) => conversations[botId] ?? [],
@@ -94,8 +123,42 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     []
   )
 
+  const loadHistory = useCallback(async (botId: string, conversationId: string) => {
+    try {
+      const res = await fetchChatHistory({ botId, sessionId: conversationId })
+      if (!res.messages || res.messages.length === 0) {
+        return
+      }
+
+      const mappedMessages: Message[] = res.messages.map((msg) => ({
+        id: msg.id || Math.random().toString(),
+        role: msg.role === 'assistant' ? 'bot' : 'user',
+        text: msg.content,
+        timestamp: new Date(msg.createdAt),
+      }))
+
+      setConversations((prev) => {
+        const list = prev[botId] ?? []
+        return {
+          ...prev,
+          [botId]: list.map((c) =>
+            c.id === conversationId
+              ? {
+                  ...c,
+                  messages: mappedMessages,
+                  title: res.title || c.title,
+                }
+              : c
+          ),
+        }
+      })
+    } catch (err) {
+      console.error('Error loading chat history:', err)
+    }
+  }, [])
+
   const sendMessage = useCallback(
-    (botId: string, conversationId: string, text: string) => {
+    async (botId: string, conversationId: string, text: string): Promise<any> => {
       const userMsg: Message = {
         id: uid(),
         role: 'user',
@@ -121,14 +184,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
       })
 
-      // Simulate bot reply after a short delay
-      setTimeout(() => {
+      try {
+        const res = await queryBotRequest({
+          botId,
+          sessionId: conversationId,
+          inputText: text
+        })
+
         const botMsg: Message = {
           id: uid(),
           role: 'bot',
-          text: getBotReply(text),
+          text: res.answer || "Sorry, I couldn't process that.",
           timestamp: new Date(),
         }
+
         setConversations((prev) => {
           const list = prev[botId] ?? []
           return {
@@ -140,7 +209,28 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             ),
           }
         })
-      }, 900 + Math.random() * 600)
+        return res
+      } catch (err: any) {
+        console.error('Error sending message:', err)
+        const errMsg: Message = {
+          id: uid(),
+          role: 'bot',
+          text: `Error: ${err.message || 'Failed to query bot.'}`,
+          timestamp: new Date(),
+        }
+        setConversations((prev) => {
+          const list = prev[botId] ?? []
+          return {
+            ...prev,
+            [botId]: list.map((c) =>
+              c.id === conversationId
+                ? { ...c, messages: [...c.messages, errMsg], updatedAt: new Date() }
+                : c
+            ),
+          }
+        })
+        throw err
+      }
     },
     []
   )
@@ -164,6 +254,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         createConversation,
         sendMessage,
         deleteConversation,
+        loadHistory,
       }}
     >
       {children}
